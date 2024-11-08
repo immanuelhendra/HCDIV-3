@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDB Resale Price Line Race</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.1/echarts.min.js"></script>
+</head>
+<body>
+    <h1>HDB Resale Prices Line Race</h1>
+    <p>This chart visualizes the trends in HDB resale prices across different areas in Singapore from January 2017 to November 2024.</p>
+    <div id="chart" style="width: 100%; height: 600px;"></div>
+
+    <script>
+        // Function to parse CSV data
+        async function fetchDataFromCSV(url) {
+            const response = await fetch(url);
+            const data = await response.text();
+            const rows = data.split('\n').map(row => row.split(','));
+            
+            // Extract headers (dates) and transform the data for ECharts
+            const headers = rows[0].slice(1); // Skip the first column header ("Area")
+            const dataTransformed = [];
+            
+            rows.slice(1).forEach(row => {
+                const area = row[0];
+                row.slice(1).forEach((value, index) => {
+                    dataTransformed.push({
+                        Area: area,
+                        Date: headers[index],
+                        ResalePrice: parseFloat(value) || 0 // Handle empty cells as 0
+                    });
+                });
+            });
+            return dataTransformed;
+        }
+
+        // Load and visualize data
+        fetchDataFromCSV('HDB Resale Price since 2017.csv').then(data => {
+            const areas = Array.from(new Set(data.map(item => item.Area)));
+            const datasetWithFilters = [];
+            const seriesList = [];
+
+            // Set up datasets and series for each area
+            areas.forEach(area => {
+                let datasetId = 'dataset_' + area;
+                datasetWithFilters.push({
+                    id: datasetId,
+                    fromDatasetId: 'dataset_raw',
+                    transform: {
+                        type: 'filter',
+                        config: { and: [{ dimension: 'Area', '=': area }] }
+                    }
+                });
+                seriesList.push({
+                    type: 'line',
+                    datasetId: datasetId,
+                    showSymbol: false,
+                    name: area,
+                    endLabel: {
+                        show: true,
+                        formatter: params => `${params.value[0]}: ${params.value[2]}`
+                    },
+                    labelLayout: { moveOverlap: 'shiftY' },
+                    emphasis: { focus: 'series' },
+                    encode: { x: 'Date', y: 'ResalePrice', label: ['Area', 'ResalePrice'], itemName: 'Date', tooltip: ['ResalePrice'] }
+                });
+            });
+
+            // ECharts option configuration
+            const option = {
+                animationDuration: 10000,
+                dataset: [{ id: 'dataset_raw', source: data }, ...datasetWithFilters],
+                title: { text: 'HDB Resale Prices by Area (2017-2024)' },
+                tooltip: { order: 'valueDesc', trigger: 'axis' },
+                xAxis: { type: 'category', nameLocation: 'middle' },
+                yAxis: { name: 'Resale Price (SGD)' },
+                grid: { right: 140 },
+                series: seriesList
+            };
+
+            // Initialize the chart
+            const chartDom = document.getElementById('chart');
+            const myChart = echarts.init(chartDom);
+            myChart.setOption(option);
+        })
+        .catch(error => console.error('Error loading CSV data:', error));
+    </script>
+</body>
+</html>
