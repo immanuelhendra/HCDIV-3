@@ -69,18 +69,18 @@
                     },
                     labelLayout: { moveOverlap: 'shiftY' },
                     emphasis: { focus: 'series' },
-                    encode: { x: 'Date', y: 'ResalePrice', label: ['Area', 'ResalePrice'], itemName: 'Date', tooltip: ['ResalePrice'] }
+                    encode: { x: 'Date', y: 'ResalePrice', tooltip: ['Date', 'ResalePrice'] } // Fixed encode
                 });
             });
 
-            // ECharts option configuration
+            // ECharts option configuration with y-axis scale intervals set to 100
             const option = {
                 animationDuration: 10000,
                 dataset: [{ id: 'dataset_raw', source: data }, ...datasetWithFilters],
                 title: { text: 'HDB Resale Prices by Area (2017-2024)' },
                 tooltip: { order: 'valueDesc', trigger: 'axis' },
                 xAxis: { type: 'category', nameLocation: 'middle' },
-                yAxis: { name: 'Resale Price (SGD)' },
+                yAxis: { name: 'Resale Price (SGD)', min: 300000, interval: 100000 }, // Set interval to 100 for y-axis
                 grid: { right: 140 },
                 series: seriesList
             };
