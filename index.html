@@ -59,21 +59,22 @@
                     }
                 });
                 seriesList.push({
-                    type: 'line',
-                    datasetId: datasetId,
-                    showSymbol: false,
-                    name: area, // Use area name as the series name
-                    endLabel: {
-                        show: true,
-                        formatter: function (params) {
-          return params.value[3] + ': ' + params.value[0];
+    type: 'line',
+    datasetId: datasetId,
+    showSymbol: false,
+    name: area, // Use area name as the series name
+    endLabel: {
+        show: true,
+        formatter: params => {
+            console.log('End Label Params:', params); // Debugging line
+            return `${params.seriesName}: ${params.value[1] || 'No Data'}`; // Updated to handle undefined values
         }
-                    },
-                    labelLayout: { moveOverlap: 'shiftY' },
-                    emphasis: { focus: 'series' },
-                    encode: { x: 'Date', y: 'ResalePrice', tooltip: ['Date', 'ResalePrice'] } // Fixed encode
-                });
-            });
+    },
+    labelLayout: { moveOverlap: 'shiftY' },
+    emphasis: { focus: 'series' },
+    encode: { x: 'Date', y: 'ResalePrice', tooltip: ['Date', 'ResalePrice'] } // Fixed encode
+});
+
 
             // ECharts option configuration with y-axis scale intervals set to 100
             const option = {
