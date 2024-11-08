@@ -9,38 +9,39 @@
 
         // Function to parse CSV data
         async function fetchDataFromCSV(url) {
-            const response = await fetch(url);
-            const data = await response.text();
-            const rows = data.trim().split('\n').map(row => row.split(','));
+    const response = await fetch(url);
+    const data = await response.text();
+    const rows = data.trim().split('\n').map(row => row.split(','));
 
-            // Extract headers for years (from 2017 to 2024)
-            const headers = rows[0].slice(1); // Skip first column (empty cell above town names)
-            const dataTransformed = [];
+    const headers = rows[0].slice(1); // Extract the dates (skip first column "Area")
+    const dataTransformed = [];
 
-            rows.slice(1).forEach((row, rowIndex) => {
-                const area = row[0]; // Column A
-                if (!area) {
-                    console.warn(`Row ${rowIndex + 2} has no area name.`);
-                    return;
-                }
-
-                // Loop through columns for each year and add data points
-                row.slice(1).forEach((value, index) => {
-                    const date = headers[index];
-                    if (date) {
-                        dataTransformed.push({
-                            Area: area.trim(),
-                            Date: date.trim(),
-                            ResalePrice: parseFloat(value) || 0 // Handle empty cells as 0
-                        });
-                    } else {
-                        console.warn(`Date header missing at index ${index + 1} for area ${area}.`);
-                    }
-                });
-            });
-            console.log("Transformed Data:", dataTransformed); // Debugging line
-            return dataTransformed;
+    rows.slice(1).forEach((row, rowIndex) => {
+        const area = row[0]; // Column A (town area name)
+        if (!area) {
+            console.warn(`Row ${rowIndex + 2} has no area name.`);
+            return;
         }
+        
+        row.slice(1).forEach((value, index) => {
+            const date = headers[index];
+            if (date) {
+                dataTransformed.push({
+                    Area: area.trim(),
+                    Date: date.trim(),
+                    ResalePrice: parseFloat(value) || 0 // Convert to number or 0 if empty
+                });
+            } else {
+                console.warn(`Date header missing at index ${index + 1} for area ${area}.`);
+            }
+        });
+    });
+
+    console.log("Transformed Data:", dataTransformed); // Debugging output
+    return dataTransformed;
+}
+
+    
 
         // Load and visualize data
         fetchDataFromCSV('HDB Resale Price since 2017.csv').then(data => {
