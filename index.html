@@ -4,34 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HDB Resale Price Line Race</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.1/echarts.min.js"></script>
-</head>
-<body>
-    <h1>HDB Resale Prices Line Race</h1>
-    <p>This chart visualizes the trends in HDB resale prices across different areas in Singapore from January 2017 to November 2024.</p>
-    <div id="chart" style="width: 100%; height: 600px;"></div>
+    <script type="module">
+        import * as echarts from 'https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.esm.min.js';
 
-    <script>
         // Function to parse CSV data
         async function fetchDataFromCSV(url) {
             const response = await fetch(url);
             const data = await response.text();
-            const rows = data.split('\n').map(row => row.split(','));
-            
-            // Extract headers (dates) and transform the data for ECharts
-            const headers = rows[0].slice(1); // Skip the first column header ("Area")
+            const rows = data.trim().split('\n').map(row => row.split(','));
+
+            // Assume the first row contains headers, including "Area" in Column A
+            const headers = rows[0].slice(1); // Extract the dates (skip first column "Area")
             const dataTransformed = [];
-            
-            rows.slice(1).forEach(row => {
-                const area = row[0];
+
+            rows.slice(1).forEach((row, rowIndex) => {
+                const area = row[0]; // Column A
+                if (!area) {
+                    console.warn(`Row ${rowIndex + 2} has no area name.`);
+                    return;
+                }
+                
                 row.slice(1).forEach((value, index) => {
-                    dataTransformed.push({
-                        Area: area,
-                        Date: headers[index],
-                        ResalePrice: parseFloat(value) || 0 // Handle empty cells as 0
-                    });
+                    const date = headers[index];
+                    if (date) {
+                        dataTransformed.push({
+                            Area: area.trim(),
+                            Date: date.trim(),
+                            ResalePrice: parseFloat(value) || 0 // Handle empty cells as 0
+                        });
+                    } else {
+                        console.warn(`Date header missing at index ${index + 1} for area ${area}.`);
+                    }
                 });
             });
+            console.log("Transformed Data:", dataTransformed); // Debugging line
             return dataTransformed;
         }
 
@@ -80,11 +86,16 @@
             };
 
             // Initialize the chart
-            const chartDom = document.getElementById('chart');
+            const chartDom = document.getElementById('main');
             const myChart = echarts.init(chartDom);
             myChart.setOption(option);
         })
         .catch(error => console.error('Error loading CSV data:', error));
     </script>
+</head>
+<body>
+    <h1>HDB Resale Prices Line Race</h1>
+    <p>This chart visualizes the trends in HDB resale prices across different areas in Singapore from January 2017 to November 2024.</p>
+    <div id="main" style="width: 100%; height: 600px;"></div>
 </body>
 </html>
