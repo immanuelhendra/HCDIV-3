@@ -58,20 +58,19 @@
                         config: { and: [{ dimension: 'Area', '=': area }] }
                     }
                 });
-                seriesList.push({
-                    type: 'line',
-                    datasetId: datasetId,
-                    showSymbol: false,
-                    name: area,
-                    endLabel: {
-                        show: true,
-                        formatter: params => `${params.value[0]}: ${params.value[2]}`
-                    },
-                    labelLayout: { moveOverlap: 'shiftY' },
-                    emphasis: { focus: 'series' },
-                    encode: { x: 'Date', y: 'ResalePrice', tooltip: ['Date', 'ResalePrice'] } // Fixed encode
-                });
-            });
+               seriesList.push({
+    type: 'line',
+    datasetId: datasetId,
+    showSymbol: false,
+    name: area, // Use area name as the series name
+    endLabel: {
+        show: true,
+        formatter: params => `${params.seriesName}: ${params.value[1]}` // Adjusted to use seriesName and value[1]
+    },
+    labelLayout: { moveOverlap: 'shiftY' },
+    emphasis: { focus: 'series' },
+    encode: { x: 'Date', y: 'ResalePrice', tooltip: ['Date', 'ResalePrice'] } // Fixed encode
+});
 
             // ECharts option configuration with y-axis scale intervals set to 100
             const option = {
