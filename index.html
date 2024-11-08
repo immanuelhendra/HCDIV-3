@@ -13,8 +13,8 @@
             const data = await response.text();
             const rows = data.trim().split('\n').map(row => row.split(','));
 
-            // Assume the first row contains headers, including "Area" in Column A
-            const headers = rows[0].slice(1); // Extract the dates (skip first column "Area")
+            // Extract headers for years (from 2017 to 2024)
+            const headers = rows[0].slice(1); // Skip first column (empty cell above town names)
             const dataTransformed = [];
 
             rows.slice(1).forEach((row, rowIndex) => {
@@ -23,7 +23,8 @@
                     console.warn(`Row ${rowIndex + 2} has no area name.`);
                     return;
                 }
-                
+
+                // Loop through columns for each year and add data points
                 row.slice(1).forEach((value, index) => {
                     const date = headers[index];
                     if (date) {
@@ -65,9 +66,8 @@
                     name: area, // Use area name as the series name
                     endLabel: {
                         show: true,
-                        formatter: params => {
-                            // Use 'params.value[1]' for resale price if the data encoding order is [Date, ResalePrice]
-                            return `${params.seriesName}: ${params.value[1] || 'No Data'}`; 
+                        formatter: function (params) {
+                            return `${params.seriesName}: ${params.value[1] || 'No Data'}`; // params.value[1] accesses ResalePrice
                         }
                     },
                     labelLayout: { moveOverlap: 'shiftY' },
@@ -87,7 +87,7 @@
                 title: { text: 'HDB Resale Prices by Area (2017-2024)' },
                 tooltip: { order: 'valueDesc', trigger: 'axis' },
                 xAxis: { type: 'category', nameLocation: 'middle' },
-                yAxis: { name: 'Resale Price (SGD)', min: 300000, interval: 100000 }, // Set interval to 100 for y-axis
+                yAxis: { name: 'Resale Price (SGD)', min: 0, interval: 100 }, // Set interval to 100 for y-axis
                 grid: { right: 140 },
                 series: seriesList
             };
