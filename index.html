@@ -65,7 +65,9 @@
                     name: area, // Use area name as the series name
                     endLabel: {
                         show: true,
-                        formatter: params => `${params.seriesName}: ${params.value[1]}` // Adjusted to use seriesName and value[1]
+                        formatter: function (params) {
+          return params.value[3] + ': ' + params.value[0];
+        }
                     },
                     labelLayout: { moveOverlap: 'shiftY' },
                     emphasis: { focus: 'series' },
@@ -80,7 +82,7 @@
                 title: { text: 'HDB Resale Prices by Area (2017-2024)' },
                 tooltip: { order: 'valueDesc', trigger: 'axis' },
                 xAxis: { type: 'category', nameLocation: 'middle' },
-                yAxis: { name: 'Resale Price (SGD)', min: 0, interval: 100 }, // Set interval to 100 for y-axis
+                yAxis: { name: 'Resale Price (SGD)', min: 300000, interval: 50000 }, // Set interval to 100 for y-axis
                 grid: { right: 140 },
                 series: seriesList
             };
