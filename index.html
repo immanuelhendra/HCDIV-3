@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HDB Resale Price Line Race</title>
-    <script type="module">
-        import * as echarts from 'https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.esm.min.js';
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js"></script>
 
+    <script>
         // Function to parse CSV data
         async function fetchDataFromCSV(url) {
             const response = await fetch(url);
@@ -14,7 +14,7 @@
             const rows = data.trim().split('\n').map(row => row.split(','));
 
             // Extract headers for years (from 2017 to 2024)
-            const headers = rows[0].slice(1); // Skip first column (Area names)
+            const headers = rows[0].slice(1); // Skip first column (empty cell above town names)
             const dataTransformed = [];
 
             rows.slice(1).forEach((row, rowIndex) => {
@@ -26,15 +26,15 @@
 
                 // Loop through columns for each year and add data points
                 row.slice(1).forEach((value, index) => {
-                    const year = headers[index];
-                    if (year) {
+                    const date = headers[index];
+                    if (date) {
                         dataTransformed.push({
                             Area: area.trim(),
-                            Year: year.trim(),
+                            Date: date.trim(),
                             ResalePrice: parseFloat(value) || 0 // Handle empty cells as 0
                         });
                     } else {
-                        console.warn(`Year header missing at index ${index + 1} for area ${area}.`);
+                        console.warn(`Date header missing at index ${index + 1} for area ${area}.`);
                     }
                 });
             });
@@ -67,15 +67,15 @@
                     endLabel: {
                         show: true,
                         formatter: function (params) {
-                            return `${params.seriesName}: ${params.value[2] || 'No Data'}`;
+                            return `${params.seriesName}: ${params.value[1] || 'No Data'}`; // params.value[1] accesses ResalePrice
                         }
                     },
                     labelLayout: { moveOverlap: 'shiftY' },
                     emphasis: { focus: 'series' },
                     encode: { 
-                        x: 'Year',       // Maps x-axis to Year column
+                        x: 'Date',       // Maps x-axis to Date column
                         y: 'ResalePrice', // Maps y-axis to ResalePrice column
-                        tooltip: ['Year', 'ResalePrice'] 
+                        tooltip: ['Date', 'ResalePrice'] 
                     }
                 });
             });
@@ -87,7 +87,7 @@
                 title: { text: 'HDB Resale Prices by Area (2017-2024)' },
                 tooltip: { order: 'valueDesc', trigger: 'axis' },
                 xAxis: { type: 'category', nameLocation: 'middle' },
-                yAxis: { name: 'Resale Price (SGD)', min: 0, interval: 10 },
+                yAxis: { name: 'Resale Price/floor area per remaining lease (SGD)', min: 0, interval: 10 },
                 grid: { right: 140 },
                 series: seriesList
             };
@@ -102,7 +102,7 @@
 </head>
 <body>
     <h1>HDB Resale Prices Line Race</h1>
-    <p>This chart visualizes the trends in HDB resale prices across different areas in Singapore from 2017 to 2024.</p>
+    <p>This chart visualizes the trends in HDB resale prices across different areas in Singapore from January 2017 to November 2024.</p>
     <div id="main" style="width: 100%; height: 600px;"></div>
 </body>
 </html>
