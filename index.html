@@ -80,12 +80,12 @@
 
             // ECharts option configuration
             const option = {
-                animationDuration: 10000,
+                animationDuration: 5000,
                 dataset: [{ id: 'dataset_raw', source: data }, ...datasetWithFilters],
                 title: { text: 'HDB Resale Prices by Area (2017-2024)' },
                 tooltip: { order: 'valueDesc', trigger: 'axis' },
                 xAxis: { type: 'category', nameLocation: 'middle' },
-                yAxis: { name: 'Resale Price (SGD)', min: 40, max: 150, interval: 10 },
+                yAxis: { name: 'Resale Price/ floor area per remaining year in the lease (SGD)', min: 40, max: 150, interval: 10 },
                 grid: { right: 140 },
                 series: seriesList
             };
@@ -99,8 +99,8 @@
     </script>
 </head>
 <body>
-    <h1>HDB Resale Prices Line Race</h1>
-    <p>This chart visualizes the trends in HDB resale prices across different areas in Singapore from 2017 to 2024.</p>
+    <h1>4 room-HDB Resale Prices/ floor area per remaining year in the lease - based on area </h1>
+    <p>The goal of this study is to show how did the 4-room HDB resale prices have changed since 2017 and to identify which areas have more expensive units. As HDB resale prices are also affected by floor area and its remaining lease duration, the data is adjusted to compare resale prices/ floor area per remaining year in the lease.    </p>
     <div id="main" style="width: 100%; height: 600px;"></div>
 </body>
 </html>
