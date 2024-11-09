@@ -3,106 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HDB Resale Price Line Race</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js"></script>
-
-    <script>
-        // Function to parse CSV data
-        async function fetchDataFromCSV(url) {
-            const response = await fetch(url);
-            const data = await response.text();
-            const rows = data.trim().split('\n').map(row => row.split(','));
-
-            // Extract headers for years (from 2017 to 2024)
-            const headers = rows[0].slice(1); // Skip first column (empty cell above town names)
-            const dataTransformed = [];
-
-            rows.slice(1).forEach((row, rowIndex) => {
-                const area = row[0]; // Column A
-                if (!area) {
-                    console.warn(`Row ${rowIndex + 2} has no area name.`);
-                    return;
-                }
-
-                // Loop through columns for each year and add data points
-                row.slice(1).forEach((value, index) => {
-                    const date = headers[index];
-                    if (date) {
-                        dataTransformed.push({
-                            Area: area.trim(),
-                            Date: date.trim(),
-                            ResalePrice: parseFloat(value) || 0 // Handle empty cells as 0
-                        });
-                    } else {
-                        console.warn(`Date header missing at index ${index + 1} for area ${area}.`);
-                    }
-                });
-            });
-            console.log("Transformed Data:", dataTransformed); // Debugging line
-            return dataTransformed;
+    <title>HDB Resale Price Line Race with D3.js</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
         }
-
-        // Load and visualize data
-        fetchDataFromCSV('HDB Resale Price since 2017.csv').then(data => {
-            const areas = Array.from(new Set(data.map(item => item.Area)));
-            const datasetWithFilters = [];
-            const seriesList = [];
-
-            // Set up datasets and series for each area
-            areas.forEach(area => {
-                let datasetId = 'dataset_' + area;
-                datasetWithFilters.push({
-                    id: datasetId,
-                    fromDatasetId: 'dataset_raw',
-                    transform: {
-                        type: 'filter',
-                        config: { and: [{ dimension: 'Area', '=': area }] }
-                    }
-                });
-                seriesList.push({
-                    type: 'line',
-                    datasetId: datasetId,
-                    showSymbol: false,
-                    name: area, // Use area name as the series name
-                    endLabel: {
-                        show: true,
-                        formatter: function (params) {
-                            return `${params.seriesName}: ${params.value[1] || 'No Data'}`; // params.value[1] accesses ResalePrice
-                        }
-                    },
-                    labelLayout: { moveOverlap: 'shiftY' },
-                    emphasis: { focus: 'series' },
-                    encode: { 
-                        x: 'Date',       // Maps x-axis to Date column
-                        y: 'ResalePrice', // Maps y-axis to ResalePrice column
-                        tooltip: ['Date', 'ResalePrice'] 
-                    }
-                });
-            });
-
-            // ECharts option configuration with y-axis scale intervals set to 100
-            const option = {
-                animationDuration: 10000,
-                dataset: [{ id: 'dataset_raw', source: data }, ...datasetWithFilters],
-                title: { text: 'HDB Resale Prices by Area (2017-2024)' },
-                tooltip: { order: 'valueDesc', trigger: 'axis' },
-                xAxis: { type: 'category', nameLocation: 'middle' },
-                yAxis: { name: 'Resale Price/floor area per remaining lease (SGD)', min: 40, interval: 5 },
-                grid: { right: 140 },
-                series: seriesList
-            };
-
-            // Initialize the chart
-            const chartDom = document.getElementById('main');
-            const myChart = echarts.init(chartDom);
-            myChart.setOption(option);
-        })
-        .catch(error => console.error('Error loading CSV data:', error));
-    </script>
+        .line {
+            fill: none;
+            stroke-width: 1.5px;
+        }
+        .axis-label {
+            font-size: 12px;
+        }
+        .title {
+            font-size: 24px;
+            text-anchor: middle;
+        }
+        .tooltip {
+            position: absolute;
+            background: #fff;
+            padding: 8px;
+            border: 1px solid #ccc;
+            pointer-events: none;
+            font-size: 12px;
+        }
+    </style>
 </head>
 <body>
-    <h1>HDB Resale Prices Line Race</h1>
-    <p>This chart visualizes the trends in HDB resale prices across different areas in Singapore from January 2017 to November 2024.</p>
-    <div id="main" style="width: 100%; height: 600px;"></div>
+    <h1>HDB Resale Prices Line Race (D3.js)</h1>
+    <p>This chart visualizes HDB resale price trends for various areas from 2017 to 2024.</p>
+    <div id="chart"></div>
+
+    <script>
+        // Load and process the CSV data
+        d3.csv("HDB Resale Price since 2017.csv").then(data => {
+            // Parse data, converting date columns to a time series format
+            const parseTime = d3.timeParse("%Y-%m");
+            const areas = data.map(row => row.Area);
+            const dates = Object.keys(data[0]).slice(1).map(parseTime);
+            
+            data.forEach(d => {
+                dates.forEach((date, i) => {
+                    d[date] = +d[Object.keys(d)[i + 1]] || 0; // Handle missing data as 0
+                });
+            });
+
+            // Define dimensions and margins
+            const margin = {top: 50, right: 150, bottom: 50, left: 50};
+            const width = 800 - margin.left - margin.right;
+            const height = 500 - margin.top - margin.bottom;
+
+            // Create SVG container
+            const svg = d3.select("#chart")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Set up scales
+            const xScale = d3.scaleTime().domain(d3.extent(dates)).range([0, width]);
+            const yScale = d3.scaleLinear().domain([0, d3.max(data, d => d3.max(dates, date => d[date]))]).range([height, 0]);
+
+            // Set up axes
+            const xAxis = d3.axisBottom(xScale);
+            const yAxis = d3.axisLeft(yScale);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(xAxis);
+
+            svg.append("g").call(yAxis);
+
+            // Add lines for each area
+            const line = d3.line()
+                .x((d, i) => xScale(dates[i]))
+                .y((d, i, nodes) => yScale(d3.select(nodes[i].parentNode).datum()[dates[i]]));
+
+            svg.selectAll(".line")
+                .data(data)
+                .enter()
+                .append("path")
+                .attr("class", "line")
+                .attr("d", d => line(dates.map(date => d[date])))
+                .attr("stroke", (d, i) => d3.schemeCategory10[i % 10])
+                .attr("stroke-width", 1.5)
+                .attr("fill", "none")
+                .attr("id", d => `line-${d.Area.replace(/\s+/g, '-')}`);
+
+            // Labels at the end of each line
+            svg.selectAll(".end-label")
+                .data(data)
+                .enter()
+                .append("text")
+                .datum(d => ({Area: d.Area, value: d[dates[dates.length - 1]]}))
+                .attr("transform", d => `translate(${width},${yScale(d.value)})`)
+                .attr("x", 3)
+                .attr("dy", "0.35em")
+                .attr("class", "axis-label")
+                .text(d => `${d.Area}: ${d.value.toFixed(2)}`);
+
+            // Title
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", -margin.top / 2)
+                .attr("class", "title")
+                .text("HDB Resale Prices by Area (2017-2024)");
+
+            // Tooltip for interactivity
+            const tooltip = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
+
+            svg.selectAll(".line")
+                .on("mouseover", function (event, d) {
+                    tooltip.transition().duration(200).style("opacity", .9);
+                    tooltip.html(`${d.Area}<br/>Resale Price: ${d[dates[dates.length - 1]]}`)
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", () => tooltip.transition().duration(500).style("opacity", 0));
+        });
+    </script>
 </body>
 </html>
