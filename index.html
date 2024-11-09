@@ -20,39 +20,43 @@
             const rows = data.trim().split('\n').map(row => row.split(','));
 
             // Extract headers for each year
-            const headers = rows[0].slice(1);  // Skip the first column (town name)
+            const years = rows[0].slice(1);  // Skip the first column (town name)
             const areasData = {};
 
+            // Process each row (skip headers row)
             rows.slice(1).forEach(row => {
                 const area = row[0].trim(); // Column A: area name
-                areasData[area] = headers.map((year, index) => ({
-                    year: year,
-                    resalePrice: parseFloat(row[index + 1]) || 0
-                }));
+                if (area) {
+                    areasData[area] = years.map((year, index) => ({
+                        x: parseInt(year), 
+                        y: parseFloat(row[index + 1]) || 0 // Read resale price data, default to 0 if empty
+                    }));
+                }
             });
-            return { headers, areasData };
+            return { years: years.map(y => parseInt(y)), areasData };
         }
 
-        function createChart(data, areas, years) {
+        // Function to create the line chart
+        function createChart(areasData, years) {
             const ctx = document.getElementById('main').getContext('2d');
 
             // Define datasets for each area
-            const datasets = areas.map((area, i) => ({
+            const datasets = Object.keys(areasData).map((area, i) => ({
                 label: area,
-                data: data[area].map(item => ({ x: item.year, y: item.resalePrice })),
-                borderColor: `hsl(${(i * 360) / areas.length}, 70%, 50%)`,
+                data: areasData[area],
+                borderColor: `hsl(${(i * 360) / Object.keys(areasData).length}, 70%, 50%)`,
                 fill: false,
                 tension: 0.4
             }));
 
-            // Create chart
+            // Create line chart
             new Line(ctx, {
                 data: {
                     datasets: datasets,
                 },
                 options: {
                     animation: {
-                        duration: 10000,  // 10 seconds for race animation
+                        duration: 10000,  // Animation duration for line race effect
                     },
                     scales: {
                         x: {
@@ -62,27 +66,32 @@
                                 text: 'Year'
                             },
                             min: Math.min(...years),
-                            max: Math.max(...years)
+                            max: Math.max(...years),
+                            ticks: {
+                                stepSize: 1  // Set step size to 1 for yearly intervals
+                            }
                         },
                         y: {
-                            beginAtZero: true,
+                            beginAtZero: false,
                             title: {
                                 display: true,
-                                text: 'Resale Price (SGD)'
+                                text: 'Resale Price (SGD in Thousands)'
                             },
+                            min: 40,
+                            max: 120,
                             ticks: {
-                                stepSize: 10 // Change based on scale needed
+                                stepSize: 10 // Set y-axis interval to 10 for better readability
                             }
                         }
                     },
                     plugins: {
                         tooltip: {
                             callbacks: {
-                                label: context => `${context.dataset.label}: SGD ${context.raw.y}`
+                                label: context => `${context.dataset.label}: SGD ${context.raw.y}k`
                             }
                         },
                         legend: {
-                            display: false
+                            display: false  // Hide legend if too cluttered
                         }
                     }
                 }
@@ -90,9 +99,8 @@
         }
 
         async function initChart() {
-            const { headers: years, areasData } = await fetchDataFromCSV('HDB Resale Price since 2017.csv');
-            const areas = Object.keys(areasData);
-            createChart(areasData, areas, years);
+            const { years, areasData } = await fetchDataFromCSV('HDB Resale Price since 2017.csv');
+            createChart(areasData, years);
         }
 
         window.onload = initChart;
