@@ -3,126 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HDB Resale Price Line Race with D3.js</title>
-    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <title>HDB Resale Price Yearly Line Race</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .line {
-            fill: none;
-            stroke-width: 1.5px;
-        }
-        .axis-label {
-            font-size: 12px;
-        }
-        .title {
-            font-size: 24px;
-            text-anchor: middle;
-        }
-        .tooltip {
-            position: absolute;
-            background: #fff;
-            padding: 8px;
-            border: 1px solid #ccc;
-            pointer-events: none;
-            font-size: 12px;
+        #main {
+            width: 100%;
+            height: 600px;
         }
     </style>
+    <script type="module">
+        import { Line } from 'https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.esm.min.js';
+
+        // Load and process CSV data
+        async function fetchDataFromCSV(url) {
+            const response = await fetch(url);
+            const data = await response.text();
+            const rows = data.trim().split('\n').map(row => row.split(','));
+
+            // Extract headers for each year
+            const headers = rows[0].slice(1);  // Skip the first column (town name)
+            const areasData = {};
+
+            rows.slice(1).forEach(row => {
+                const area = row[0].trim(); // Column A: area name
+                areasData[area] = headers.map((year, index) => ({
+                    year: year,
+                    resalePrice: parseFloat(row[index + 1]) || 0
+                }));
+            });
+            return { headers, areasData };
+        }
+
+        function createChart(data, areas, years) {
+            const ctx = document.getElementById('main').getContext('2d');
+
+            // Define datasets for each area
+            const datasets = areas.map((area, i) => ({
+                label: area,
+                data: data[area].map(item => ({ x: item.year, y: item.resalePrice })),
+                borderColor: `hsl(${(i * 360) / areas.length}, 70%, 50%)`,
+                fill: false,
+                tension: 0.4
+            }));
+
+            // Create chart
+            new Line(ctx, {
+                data: {
+                    datasets: datasets,
+                },
+                options: {
+                    animation: {
+                        duration: 10000,  // 10 seconds for race animation
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Year'
+                            },
+                            min: Math.min(...years),
+                            max: Math.max(...years)
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Resale Price (SGD)'
+                            },
+                            ticks: {
+                                stepSize: 100 // Change based on scale needed
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: context => `${context.dataset.label}: SGD ${context.raw.y}`
+                            }
+                        },
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        async function initChart() {
+            const { headers: years, areasData } = await fetchDataFromCSV('HDB Resale Price since 2017.csv');
+            const areas = Object.keys(areasData);
+            createChart(areasData, areas, years);
+        }
+
+        window.onload = initChart;
+    </script>
 </head>
 <body>
-    <h1>HDB Resale Prices Line Race (D3.js)</h1>
-    <p>This chart visualizes HDB resale price trends for various areas from 2017 to 2024.</p>
-    <div id="chart"></div>
-
-    <script>
-        // Load and process the CSV data
-        d3.csv("HDB Resale Price since 2017.csv").then(data => {
-            // Parse data, converting date columns to a time series format
-            const parseTime = d3.timeParse("%Y-%m");
-            const areas = data.map(row => row.Area);
-            const dates = Object.keys(data[0]).slice(1).map(parseTime);
-            
-            data.forEach(d => {
-                dates.forEach((date, i) => {
-                    d[date] = +d[Object.keys(d)[i + 1]] || 0; // Handle missing data as 0
-                });
-            });
-
-            // Define dimensions and margins
-            const margin = {top: 50, right: 150, bottom: 50, left: 50};
-            const width = 800 - margin.left - margin.right;
-            const height = 500 - margin.top - margin.bottom;
-
-            // Create SVG container
-            const svg = d3.select("#chart")
-                .append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
-
-            // Set up scales
-            const xScale = d3.scaleTime().domain(d3.extent(dates)).range([0, width]);
-            const yScale = d3.scaleLinear().domain([0, d3.max(data, d => d3.max(dates, date => d[date]))]).range([height, 0]);
-
-            // Set up axes
-            const xAxis = d3.axisBottom(xScale);
-            const yAxis = d3.axisLeft(yScale);
-
-            svg.append("g")
-                .attr("transform", `translate(0,${height})`)
-                .call(xAxis);
-
-            svg.append("g").call(yAxis);
-
-            // Add lines for each area
-            const line = d3.line()
-                .x((d, i) => xScale(dates[i]))
-                .y((d, i, nodes) => yScale(d3.select(nodes[i].parentNode).datum()[dates[i]]));
-
-            svg.selectAll(".line")
-                .data(data)
-                .enter()
-                .append("path")
-                .attr("class", "line")
-                .attr("d", d => line(dates.map(date => d[date])))
-                .attr("stroke", (d, i) => d3.schemeCategory10[i % 10])
-                .attr("stroke-width", 1.5)
-                .attr("fill", "none")
-                .attr("id", d => `line-${d.Area.replace(/\s+/g, '-')}`);
-
-            // Labels at the end of each line
-            svg.selectAll(".end-label")
-                .data(data)
-                .enter()
-                .append("text")
-                .datum(d => ({Area: d.Area, value: d[dates[dates.length - 1]]}))
-                .attr("transform", d => `translate(${width},${yScale(d.value)})`)
-                .attr("x", 3)
-                .attr("dy", "0.35em")
-                .attr("class", "axis-label")
-                .text(d => `${d.Area}: ${d.value.toFixed(2)}`);
-
-            // Title
-            svg.append("text")
-                .attr("x", width / 2)
-                .attr("y", -margin.top / 2)
-                .attr("class", "title")
-                .text("HDB Resale Prices by Area (2017-2024)");
-
-            // Tooltip for interactivity
-            const tooltip = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
-
-            svg.selectAll(".line")
-                .on("mouseover", function (event, d) {
-                    tooltip.transition().duration(200).style("opacity", .9);
-                    tooltip.html(`${d.Area}<br/>Resale Price: ${d[dates[dates.length - 1]]}`)
-                        .style("left", (event.pageX + 5) + "px")
-                        .style("top", (event.pageY - 28) + "px");
-                })
-                .on("mouseout", () => tooltip.transition().duration(500).style("opacity", 0));
-        });
-    </script>
+    <h1>HDB Resale Prices by Area (2017-2024)</h1>
+    <p>This chart shows the yearly trend in HDB resale prices across different areas in Singapore from 2017 onward.</p>
+    <canvas id="main"></canvas>
 </body>
 </html>
